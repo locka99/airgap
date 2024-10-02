@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package wrapper;
+
+message Header {
+  sint32 version = 1;
+  uint64 num_packets = 2;
+}
+
+message Packet {
+  uint64 packet = 1;
+  bytes data = 2;
+}

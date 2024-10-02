@@ -40,7 +40,7 @@ fn main() {
             Arg::new("output")
                 .short('o')
                 .long("output")
-                .help("Ouput File")
+                .help("Output File")
                 .action(ArgAction::Set)
                 .num_args(1..)
         )
