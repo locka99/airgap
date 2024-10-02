@@ -1,7 +1,11 @@
-use qrcode::QrCode;
-use image::Luma;
-use clap::{command, value_parser, Arg, ArgAction, ArgGroup, ArgMatches, Command};
 use clap::builder::PossibleValue;
+use clap::{Arg, ArgAction, Command};
+use image::Luma;
+use qrcode::QrCode;
+
+pub mod wrapper {
+    include!(concat!(env!("OUT_DIR"), "/wrapper.rs"));
+}
 
 fn main() {
     // --ecl [LMQH]
@@ -45,6 +49,11 @@ fn main() {
                 .num_args(1..)
         )
         .get_matches();
+
+
+    let header = wrapper::Header {
+
+    } ;
 
     // Encode some data into bits.
     let code = QrCode::new(b"01234567").unwrap();
