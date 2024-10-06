@@ -11,3 +11,10 @@ message Packet {
   uint64 packet = 1;
   bytes data = 2;
 }
+
+message File {
+  bytes filename = 1;
+  uint64 size = 2;
+  sint32 crc32 = 3;
+  bytes data = 4;
+}
