@@ -1,9 +1,8 @@
 mod proto;
 mod qr;
 
-use std::fs;
 use std::fs::File;
-use std::io::{Error, Read};
+use std::io::{Error, Read, Write};
 use std::path::Path;
 use clap::builder::PossibleValue;
 use clap::{Arg, ArgAction, Command};
@@ -69,7 +68,7 @@ fn main() {
     let out_dir = matches.get_one::<String>("output").map(|f| Path::new(f)).unwrap();
 
     let data = file_to_data(in_file).unwrap();
-    generate_qrs(ecl, &data, out_dir).unwrap();
+    generate_qr_codes(ecl, &data, out_dir).unwrap();
 }
 
 fn file_to_data(file_path: &Path) -> Result<Vec<u8>, Error> {
@@ -87,7 +86,7 @@ fn file_to_data(file_path: &Path) -> Result<Vec<u8>, Error> {
     Ok(data)
 }
 
-fn generate_qrs(ecl: EcLevel, data: &[u8], out_dir: &Path) -> Result<(), Error> {
+fn generate_qr_codes(ecl: EcLevel, data: &[u8], out_dir: &Path) -> Result<(), Error> {
     let level = LEVEL_30;
     let packet_size = {
         let level_index = match ecl {
@@ -100,15 +99,25 @@ fn generate_qrs(ecl: EcLevel, data: &[u8], out_dir: &Path) -> Result<(), Error> 
     };
 
     let mut packets = Vec::new();
-    let start_idx = 0;
+    let mut start: usize = 0;
 
     loop {
+        let end: usize = if start + packet_size > data.len() {
+            data.len()
+        }
+        else {
+            start + packet_size
+        };
         let mut packet_data = vec![0u8; packet_size];
-            packets.push(wrapper::Packet {
-                packet_nr: packets.len() as u64,
-                data
-            });
-        } else {
+
+        packet_data.write(&data[start..end]);
+        start = end;
+
+        packets.push(wrapper::Packet {
+            packet: packets.len() as u64,
+            data: data.to_vec()
+        });
+        if end == data.len() {
             break;
         }
     }
@@ -137,4 +146,6 @@ fn generate_qrs(ecl: EcLevel, data: &[u8], out_dir: &Path) -> Result<(), Error> 
         .dark_color('#')
         .build();
     println!("{}", string);
+
+    Ok(())
 }
