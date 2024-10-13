@@ -1,16 +1,13 @@
 mod proto;
 mod qr;
 
+use crate::proto::wrapper::{self};
+use clap::builder::PossibleValue;
+use clap::{Arg, ArgAction, Command};
+use qrcode::EcLevel;
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::path::Path;
-use clap::builder::PossibleValue;
-use clap::{Arg, ArgAction, Command};
-use image::Luma;
-use qrcode::{EcLevel, QrCode};
-
-use crate::proto::wrapper::{self};
-use crate::qr::LEVEL_30;
 
 fn main() {
     // --ecl [LMQH]
@@ -67,12 +64,13 @@ fn main() {
     let in_file = matches.get_one::<String>("input").map(|f| Path::new(f)).unwrap();
     let out_dir = matches.get_one::<String>("output").map(|f| Path::new(f)).unwrap();
 
-    let data = file_to_data(in_file).unwrap();
-    generate_qr_codes(ecl, &data, out_dir).unwrap();
+    let file = file_to_data(in_file).unwrap();
+    let name = in_file.file_name().unwrap().to_str().unwrap();
+    qr::encode_as_qr_codes(ecl, &file.data, name, out_dir).unwrap();
 }
 
-fn file_to_data(file_path: &Path) -> Result<Vec<u8>, Error> {
-    let file_data = {
+fn file_to_data(file_path: &Path) -> Result<wrapper::File, Error> {
+    let data = {
         let mut f = File::open(&file_path)?;
         let file_len = f.metadata()?.len() as usize;
         let mut data = vec![0u8; file_len];
@@ -81,71 +79,11 @@ fn file_to_data(file_path: &Path) -> Result<Vec<u8>, Error> {
     };
 
     // TODO data should be meta data + file data
-
-    let data = file_data;
-    Ok(data)
+    Ok(wrapper::File {
+        crc32: 0,
+        filename: file_path.file_name().unwrap().to_str().unwrap().as_bytes().to_vec(),
+        size: data.len() as u64,
+        data,
+    })
 }
 
-fn generate_qr_codes(ecl: EcLevel, data: &[u8], out_dir: &Path) -> Result<(), Error> {
-    let level = LEVEL_30;
-    let packet_size = {
-        let level_index = match ecl {
-            EcLevel::L => 2,
-            EcLevel::M => 1,
-            EcLevel::Q => 2,
-            EcLevel::H => 3,
-        };
-        level[level_index] as usize
-    };
-
-    let mut packets = Vec::new();
-    let mut start: usize = 0;
-
-    loop {
-        let end: usize = if start + packet_size > data.len() {
-            data.len()
-        }
-        else {
-            start + packet_size
-        };
-        let mut packet_data = vec![0u8; packet_size];
-
-        packet_data.write(&data[start..end]);
-        start = end;
-
-        packets.push(wrapper::Packet {
-            packet: packets.len() as u64,
-            data: data.to_vec()
-        });
-        if end == data.len() {
-            break;
-        }
-    }
-
-    let header = wrapper::Header {
-        num_packets: packets.len() as u64,
-        version: 0,
-    };
-
-    // Now the header and packets are going to be written as
-    // QR codes
-
-    // Encode some data into bits.
-    let code = QrCode::with_error_correction_level(b"01234567", ecl).unwrap();
-
-    // Render the bits into an image.
-    let image = code.render::<Luma<u8>>().build();
-
-    // Save the image.
-    let out_file = out_dir.join("qrcode.png");
-    image.save(&out_file).unwrap();
-
-    // You can also render it into a string.
-    let string = code.render()
-        .light_color(' ')
-        .dark_color('#')
-        .build();
-    println!("{}", string);
-
-    Ok(())
-}
