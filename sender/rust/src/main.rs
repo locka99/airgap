@@ -4,16 +4,15 @@ mod qr;
 use crate::proto::wrapper::{self};
 use clap::builder::PossibleValue;
 use clap::{Arg, ArgAction, Command};
-use qrcode::EcLevel;
+use qrcode::{EcLevel, Version};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::path::Path;
 
 fn main() {
-    // --ecl [LMQH]
-    // --qr size
-    // --input infile
-    // --output png
+    // -e,--ecl [LMQH]
+    // -i,--input input file
+    // -o,--output directory
 
     let matches = Command::new("airgap")
         .about("airgap utility")
@@ -61,12 +60,14 @@ fn main() {
         }
     }).unwrap();
 
+    let version = Version::Normal(30);
+
     let in_file = matches.get_one::<String>("input").map(|f| Path::new(f)).unwrap();
     let out_dir = matches.get_one::<String>("output").map(|f| Path::new(f)).unwrap();
 
     let file = file_to_data(in_file).unwrap();
     let name = in_file.file_name().unwrap().to_str().unwrap();
-    qr::encode_as_qr_codes(ecl, &file.data, name, out_dir).unwrap();
+    qr::encode_as_qr_codes(version, ecl, &file.data, name, out_dir).unwrap();
 }
 
 fn file_to_data(file_path: &Path) -> Result<wrapper::File, Error> {

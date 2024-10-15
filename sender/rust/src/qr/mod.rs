@@ -3,7 +3,7 @@
 use crate::proto::wrapper;
 use image::Luma;
 use prost::encoding::{encode_varint, encoded_len_varint};
-use qrcode::{EcLevel, QrCode};
+use qrcode::{EcLevel, QrCode, Version};
 use std::io::{Error, Write};
 use std::path::Path;
 
@@ -19,21 +19,21 @@ const LEVEL_30: [u16; 4] = [1732, 1370, 982, 742];
 // 177x177
 const LEVEL_40: [u16; 4] = [2953, 2331, 1663, 1273];
 
-fn qr_code_payload_size(level: u16, ecl: EcLevel) -> usize {
+fn qr_code_payload_size(version: Version, ecl: EcLevel) -> usize {
     let level_index = match ecl {
         EcLevel::L => 2,
         EcLevel::M => 1,
         EcLevel::Q => 2,
         EcLevel::H => 3,
     };
-    match level {
-        30 => LEVEL_30[level_index] as usize,
-        _ => panic!("Level not supported")
+    match version {
+        Version::Normal(30) => LEVEL_30[level_index] as usize,
+        _ => panic!("Version not supported")
     }
 }
 
-pub fn encode_as_qr_codes(ecl: EcLevel, data: &[u8], name: &str, out_dir: &Path) -> Result<(), Error> {
-    let packet_size = qr_code_payload_size(30, ecl);
+pub fn encode_as_qr_codes(version: Version, ecl: EcLevel, data: &[u8], name: &str, out_dir: &Path) -> Result<(), Error> {
+    let packet_size = qr_code_payload_size(version, ecl);
 
     let mut packets = Vec::new();
     let mut start: usize = 0;
@@ -89,15 +89,16 @@ pub fn encode_as_qr_codes(ecl: EcLevel, data: &[u8], name: &str, out_dir: &Path)
 
     packets.iter().enumerate().for_each(|(i, p)| {
         let file_name = format!("{}-{}.qr.png", name, i);
-        let _ = write_qr_file(ecl, out_dir, &file_name, p);
+        let _ = write_qr_file(version, ecl, out_dir, &file_name, p);
     });
 
     Ok(())
 }
 
-fn write_qr_file(ecl: EcLevel, out_dir: &Path, file_name: &str, packet: &wrapper::Packet) -> Result<(), Error> {
+fn write_qr_file(version: Version, ecl: EcLevel, out_dir: &Path, file_name: &str, packet: &wrapper::Packet) -> Result<(), Error> {
+
     // Encode some data into bits.
-    let code = QrCode::with_error_correction_level(&packet.data, ecl).unwrap();
+    let code = QrCode::with_version(&packet.data, version, ecl).unwrap();
 
     // Render the bits into an image.
     let image = code.render::<Luma<u8>>().build();
