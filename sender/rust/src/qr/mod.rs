@@ -27,7 +27,10 @@ fn qr_code_payload_size(version: Version, ecl: EcLevel) -> usize {
         EcLevel::H => 3,
     };
     match version {
+        Version::Normal(10) => LEVEL_10[level_index] as usize,
+        Version::Normal(20) => LEVEL_20[level_index] as usize,
         Version::Normal(30) => LEVEL_30[level_index] as usize,
+        Version::Normal(40) => LEVEL_40[level_index] as usize,
         _ => panic!("Version not supported")
     }
 }
