@@ -10,9 +10,10 @@ use std::io::{Error, Read, Write};
 use std::path::Path;
 
 fn main() {
-    // -e,--ecl [LMQH]
-    // -i,--input input file
-    // -o,--output directory
+    // --level [LMQH]
+    // --version [30]
+    // --input infile
+    // --output png
 
     let matches = Command::new("airgap")
         .about("airgap utility")
@@ -20,8 +21,8 @@ fn main() {
         .arg_required_else_help(true)
         .arg(
             Arg::new("ecl")
-                .short('e')
-                .long("ecl")
+                .short('l')
+                .long("level")
                 .help("Error Correction Level within QR code")
                 .action(ArgAction::Set)
                 .num_args(1)
@@ -31,6 +32,18 @@ fn main() {
                     PossibleValue::new("M").help("Approx 15%"),
                     PossibleValue::new("Q").help("Approx 25%"),
                     PossibleValue::new("H").help("Approx 30%")
+                ])
+        )
+        .arg(
+            Arg::new("version")
+                .short('v')
+                .long("level")
+                .help("QR code level")
+                .action(ArgAction::Set)
+                .num_args(1)
+                .default_value("30")
+                .value_parser([
+                    PossibleValue::new("30").help("Level 30"),
                 ])
         )
         .arg(
